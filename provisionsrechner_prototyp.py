@@ -8,23 +8,17 @@ st.image("https://raw.githubusercontent.com/SalonChrisBest/easyProvisionsrechner
 
 with st.container():
     st.markdown("### Willkommen im Provisionsrechner 💡")
-    st.markdown(
-        "Schön, dass du da bist! 🙌  
-"
-        "Diese App hilft dir dabei, **dein Wunschgehalt zu erreichen** – transparent, motivierend und realistisch.
+    st.markdown("""
+    Schön, dass du da bist! 🙌  
+    Diese App hilft dir dabei, **dein Wunschgehalt zu erreichen** – transparent, motivierend und realistisch.
 
-"
-        "🔍 Gib einfach deinen aktuellen Stand ein,  
-"
-        "🚀 und du bekommst direkt deinen persönlichen Fahrplan für den Monat.  
-"
-        "💡 Egal wo du gerade stehst – du kannst dein Ziel erreichen.
+    🔍 Gib einfach deinen aktuellen Stand ein,  
+    🚀 und du bekommst direkt deinen persönlichen Fahrplan für den Monat.  
+    💡 Egal wo du gerade stehst – du kannst dein Ziel erreichen.
 
-"
-        "*Let’s grow together.*  
-"
-        "**Dein Chris 💙**"
-    )
+    _Let’s grow together._  
+    **Dein Chris 💙**
+    """)
 
 st.divider()
 
