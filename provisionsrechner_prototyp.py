@@ -1,13 +1,11 @@
 
 import streamlit as st
+from datetime import datetime
 
 st.set_page_config(page_title="Provisionsrechner", layout="centered")
 
 # --- Logo und Begrüßung ---
 st.image("https://raw.githubusercontent.com/SalonChrisBest/easyProvisionsrechner/main/SalonChrisBest_Logo_schwarz.jpg", width=200)
-
-
-
 
 with st.container():
     st.markdown("### Willkommen im Provisionsrechner 💡")
@@ -30,19 +28,14 @@ with st.form("provisions_form"):
     st.subheader("🔧 Deine Eingaben")
 
     name = st.text_input("Name")
-from datetime import datetime
 
-# Automatisch aktuellen Monat bestimmen
-aktueller_monat = datetime.now().strftime("%B")
-
-# Liste aller Monate (Deutsch)
-monate = [
-    "Januar", "Februar", "März", "April", "Mai", "Juni",
-    "Juli", "August", "September", "Oktober", "November", "Dezember"
-]
-
-# Auswahlfeld mit aktueller Vorauswahl
-monat = st.selectbox("Monat", monate, index=monate.index(aktueller_monat))
+    # Monatsauswahl mit automatischer Vorauswahl
+    aktueller_monat = datetime.now().strftime("%B")
+    monate = [
+        "Januar", "Februar", "März", "April", "Mai", "Juni",
+        "Juli", "August", "September", "Oktober", "November", "Dezember"
+    ]
+    monat = st.selectbox("Monat", monate, index=monate.index(aktueller_monat))
 
     modell = st.radio("Arbeitszeitmodell", ["Modell A (Di–Fr)", "Modell B (Mo–Fr)"])
     arbeitstage_gesamt = st.number_input("Arbeitstage im Monat (inkl. Urlaub/Feiertage)", min_value=1, max_value=31, value=22)
@@ -87,4 +80,3 @@ if submitted:
             st.error("🔥 Du bist hinten dran – lass uns gemeinsam überlegen, wie du aufholen kannst!")
     except Exception as e:
         st.error("Fehler bei der Berechnung. Bitte überprüfe deine Eingaben.")
-        
