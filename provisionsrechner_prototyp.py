@@ -4,7 +4,8 @@ import streamlit as st
 st.set_page_config(page_title="Provisionsrechner", layout="centered")
 
 # --- Logo und Begrüßung ---
-st.image("https://raw.githubusercontent.com/SalonChrisBest/easyProvisionsrechner/main/SalonChrisBest_Logo_schwarz.JPG", width=200)
+st.image("SalonChrisBest_Logo_schwarz.JPG", width=200)
+
 
 with st.container():
     st.markdown("### Willkommen im Provisionsrechner 💡")
