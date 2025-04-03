@@ -70,4 +70,5 @@ if submitted:
         else:
             st.error("🔥 Du bist hinten dran – lass uns gemeinsam überlegen, wie du aufholen kannst!")
     except Exception as e:
-        st.error("Fehler bei der Berechnung. Bitte überprüfe deine Eingaben.")
+        st.error("Fehler bei der Berechnung. Bitte überprüfe deine Eingaben.")st.image("SalonChrisBest_Logo_schwarz 2.JPG", width=200)
+        
