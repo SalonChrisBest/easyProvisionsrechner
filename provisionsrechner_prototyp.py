@@ -30,7 +30,20 @@ with st.form("provisions_form"):
     st.subheader("🔧 Deine Eingaben")
 
     name = st.text_input("Name")
-    monat = st.selectbox("Monat", ["April", "Mai", "Juni"])
+   from datetime import datetime
+
+# Automatisch aktuellen Monat bestimmen
+aktueller_monat = datetime.now().strftime("%B")
+
+# Liste aller Monate (Deutsch)
+monate = [
+    "Januar", "Februar", "März", "April", "Mai", "Juni",
+    "Juli", "August", "September", "Oktober", "November", "Dezember"
+]
+
+# Auswahlfeld mit aktueller Vorauswahl
+monat = st.selectbox("Monat", monate, index=monate.index(aktueller_monat))
+
     modell = st.radio("Arbeitszeitmodell", ["Modell A (Di–Fr)", "Modell B (Mo–Fr)"])
     arbeitstage_gesamt = st.number_input("Arbeitstage im Monat (inkl. Urlaub/Feiertage)", min_value=1, max_value=31, value=22)
     arbeitstage_bisher = st.number_input("Bereits gearbeitete Tage", min_value=0, max_value=arbeitstage_gesamt, value=2)
