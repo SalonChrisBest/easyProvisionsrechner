@@ -108,6 +108,22 @@ if fortschritt >= 100:
     st.success("🎉 BOOM! Du hast dein Ziel geknackt! Gönn dir den Moment – das ist DEIN Erfolg! 🥂")
 
 st.markdown("---")
+
+# Zielbereiche für Heimpflegeanteil
+st.subheader("🎯 Heimpflege-Zielbereich")
+if verkaufsanteil < 5:
+    st.warning("🔴 Dein Heimpflegeanteil liegt aktuell unter 5 %. Starte klein – 1 Produkt mehr pro Beratung kann viel bewirken!")
+elif verkaufsanteil < 10:
+    st.info("🟡 Da ist noch Luft nach oben – baue deine Expertise gezielt in die Beratung ein.")
+elif verkaufsanteil < 15:
+    st.success("🔵 Du bist stabil unterwegs – bleib dran!")
+elif verkaufsanteil <= 20:
+    st.success("🟢 Stark! Du liegst im optimalen Zielbereich – weiter so!")
+else:
+    st.balloons()
+    st.success("🟣 Du bist ein Heimpflege-Profi – du inspirierst dein Team! 🚀")
+
+
 st.subheader("💬 Motivation")
 if fortschritt < 50:
     st.info("🔁 Du bist in Bewegung – dranbleiben lohnt sich!")
