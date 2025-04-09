@@ -7,8 +7,8 @@ import os
 
 DATA_FILE = "umsatzverlauf.csv"
 
-def speichere_eintrag(name, monat, tag, umsatz):
-    eintrag = pd.DataFrame([{"Name": name, "Monat": monat, "Tag": tag, "Umsatz": umsatz}])
+def speichere_eintrag(name, monat, tag, dl, vk):
+    eintrag = pd.DataFrame([{"Name": name, "Monat": monat, "Tag": tag, "DL": dl, "VK": vk}])
     if os.path.exists(DATA_FILE):
         alt = pd.read_csv(DATA_FILE)
         df = pd.concat([alt, eintrag], ignore_index=True)
@@ -19,8 +19,10 @@ def speichere_eintrag(name, monat, tag, umsatz):
 def lade_umsatzliste(name, monat):
     if os.path.exists(DATA_FILE):
         df = pd.read_csv(DATA_FILE)
-        return df[(df["Name"] == name) & (df["Monat"] == monat)]["Umsatz"].tolist()
-    return []
+        gefiltert = df[(df["Name"] == name) & (df["Monat"] == monat)]
+        gesamt = gefiltert["DL"].sum() + gefiltert["VK"].sum()
+        return gesamt, gefiltert["DL"].sum(), gefiltert["VK"].sum()
+    return 0, 0, 0
 
 feiertage_rlp_2025 = {
     date(2025, 1, 1), date(2025, 3, 21), date(2025, 4, 21), date(2025, 5, 1),
@@ -42,16 +44,18 @@ urlaubstage = st.number_input("Geplante Urlaubstage", min_value=0, max_value=31,
 arbeitstage_bisher = st.number_input("Bereits gearbeitete Tage", min_value=0, max_value=31, value=2)
 fixgehalt = st.number_input("Fixgehalt (Brutto €)", value=2500)
 wunschgehalt = st.number_input("Wunschgehalt (Brutto €)", value=3500)
-umsatz_heute = st.number_input("Umsatz heute (€)", value=0)
+
+umsatz_dl = st.number_input("Umsatz heute (Dienstleistung)", value=0)
+umsatz_vk = st.number_input("Umsatz heute (Verkauf)", value=0)
+umsatz_gesamt_heute = umsatz_dl + umsatz_vk
 heutiges_datum = date.today()
 
 if st.button("💾 Umsatz speichern"):
-    if name and umsatz_heute > 0:
-        speichere_eintrag(name, monat, heutiges_datum.day, umsatz_heute)
+    if name and umsatz_gesamt_heute > 0:
+        speichere_eintrag(name, monat, heutiges_datum.day, umsatz_dl, umsatz_vk)
         st.success("Umsatz wurde gespeichert! 🎉")
 
-umsatzliste = lade_umsatzliste(name, monat)
-aktueller_umsatz = sum(umsatzliste)
+aktueller_umsatz, gesamt_dl, gesamt_vk = lade_umsatzliste(name, monat)
 
 monat_nummer = monate.index(monat) + 1
 jahr = 2025
@@ -83,10 +87,14 @@ if aktueller_umsatz > lf4:
     else:
         provision = 0.3 * (aktueller_umsatz - lf4)
 
+verkaufsanteil = (gesamt_vk / aktueller_umsatz * 100) if aktueller_umsatz > 0 else 0
+
 st.markdown("---")
 st.subheader(f"📊 Dein Zwischenstand für {monat}")
 st.markdown(f"**Arbeitstage (abzgl. Urlaub):** {arbeitstage_gesamt}")
-st.markdown(f"**Aktueller Umsatz:** {aktueller_umsatz:.2f} €")
+st.markdown(f"**Umsatz gesamt:** {aktueller_umsatz:.2f} €")
+st.markdown(f"**Davon DL:** {gesamt_dl:.2f} € | **VK (Heimpflege):** {gesamt_vk:.2f} €")
+st.markdown(f"**Heimpflegeanteil:** {verkaufsanteil:.1f} %")
 st.markdown(f"**Aktueller LF:** {aktueller_lf:.2f}")
 st.markdown(f"**Aktuelle Provision:** {provision:.2f} €")
 st.markdown(f"**Noch benötigter Umsatz:** {restumsatz:.2f} €")
