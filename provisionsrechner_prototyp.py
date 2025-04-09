@@ -5,24 +5,22 @@ import calendar
 import pandas as pd
 import os
 
-DATA_FILE = "mitarbeiterdaten.csv"
+DATA_FILE = "umsatzverlauf.csv"
 
-def lade_daten(name):
+def speichere_eintrag(name, monat, tag, umsatz):
+    eintrag = pd.DataFrame([{"Name": name, "Monat": monat, "Tag": tag, "Umsatz": umsatz}])
+    if os.path.exists(DATA_FILE):
+        alt = pd.read_csv(DATA_FILE)
+        df = pd.concat([alt, eintrag], ignore_index=True)
+    else:
+        df = eintrag
+    df.to_csv(DATA_FILE, index=False)
+
+def lade_umsatzliste(name, monat):
     if os.path.exists(DATA_FILE):
         df = pd.read_csv(DATA_FILE)
-        eintrag = df[df["Name"] == name]
-        if not eintrag.empty:
-            return eintrag.iloc[-1].to_dict()
-    return {}
-
-def speichere_daten(daten):
-    df_neu = pd.DataFrame([daten])
-    if os.path.exists(DATA_FILE):
-        df_alt = pd.read_csv(DATA_FILE)
-        df = pd.concat([df_alt, df_neu], ignore_index=True)
-    else:
-        df = df_neu
-    df.to_csv(DATA_FILE, index=False)
+        return df[(df["Name"] == name) & (df["Monat"] == monat)]["Umsatz"].tolist()
+    return []
 
 feiertage_rlp_2025 = {
     date(2025, 1, 1), date(2025, 3, 21), date(2025, 4, 21), date(2025, 5, 1),
@@ -34,83 +32,80 @@ st.set_page_config(page_title="Provisionsrechner", layout="centered")
 st.image("https://raw.githubusercontent.com/SalonChrisBest/easyProvisionsrechner/main/SalonChrisBest_Logo_schwarz.jpg", width=200)
 st.markdown("### Willkommen im Provisionsrechner 💡")
 
-name = st.text_input("Gib deinen Namen ein (für automatische Speicherung):")
-daten_alt = lade_daten(name) if name else {}
+name = st.text_input("Name")
+monate = ["Januar", "Februar", "März", "April", "Mai", "Juni",
+          "Juli", "August", "September", "Oktober", "November", "Dezember"]
+aktueller_monat = datetime.now().strftime("%B")
+monat = st.selectbox("Monat", monate, index=monate.index(aktueller_monat))
+modell = st.radio("Arbeitszeitmodell", ["Modell A (Di–Fr)", "Modell B (Mo–Fr)"])
+urlaubstage = st.number_input("Geplante Urlaubstage", min_value=0, max_value=31, value=0)
+arbeitstage_bisher = st.number_input("Bereits gearbeitete Tage", min_value=0, max_value=31, value=2)
+fixgehalt = st.number_input("Fixgehalt (Brutto €)", value=2500)
+wunschgehalt = st.number_input("Wunschgehalt (Brutto €)", value=3500)
+umsatz_heute = st.number_input("Umsatz heute (€)", value=0)
+heutiges_datum = date.today()
 
-with st.form("provisions_form"):
-    aktueller_monat = datetime.now().strftime("%B")
-    monate = [
-        "Januar", "Februar", "März", "April", "Mai", "Juni",
-        "Juli", "August", "September", "Oktober", "November", "Dezember"
-    ]
-    monat = st.selectbox("Monat", monate, index=monate.index(aktueller_monat))
-    modell = st.radio("Arbeitszeitmodell", ["Modell A (Di–Fr)", "Modell B (Mo–Fr)"],
-                      index=0 if daten_alt.get("Modell") == "Modell A (Di–Fr)" else 1)
-    urlaubstage = st.number_input("Geplante Urlaubstage", min_value=0, max_value=31,
-                                  value=int(daten_alt.get("Urlaubstage", 0)))
-    arbeitstage_bisher = st.number_input("Bereits gearbeitete Tage", min_value=0, max_value=31,
-                                         value=int(daten_alt.get("GearbeiteteTage", 2)))
-    fixgehalt = st.number_input("Fixgehalt (Brutto €)", value=float(daten_alt.get("Fixgehalt", 2500)))
-    wunschgehalt = st.number_input("Wunschgehalt (Brutto €)", value=float(daten_alt.get("Wunschgehalt", 3500)))
-    umsaetze_str = st.text_input("Tagesumsätze (durch Kommas getrennt)",
-                                 daten_alt.get("Umsaetze", "614, 544"))
-    submitted = st.form_submit_button("🚀 Berechnen")
+if st.button("💾 Umsatz speichern"):
+    if name and umsatz_heute > 0:
+        speichere_eintrag(name, monat, heutiges_datum.day, umsatz_heute)
+        st.success("Umsatz wurde gespeichert! 🎉")
 
-if submitted and name:
-    monat_nummer = monate.index(monat) + 1
-    jahr = datetime.now().year
-    _, anzahl_tage = calendar.monthrange(jahr, monat_nummer)
+umsatzliste = lade_umsatzliste(name, monat)
+aktueller_umsatz = sum(umsatzliste)
 
-    arbeitstage_gesamt = 0
-    for tag in range(1, anzahl_tage + 1):
-        aktuelles_datum = date(jahr, monat_nummer, tag)
-        wochentag = aktuelles_datum.weekday()
-        if modell == "Modell A (Di–Fr)" and wochentag in [1, 2, 3, 4]:
-            if aktuelles_datum not in feiertage_rlp_2025:
-                arbeitstage_gesamt += 1
-        elif modell == "Modell B (Mo–Fr)" and wochentag in [0, 1, 2, 3, 4]:
-            if aktuelles_datum not in feiertage_rlp_2025:
-                arbeitstage_gesamt += 1
+monat_nummer = monate.index(monat) + 1
+jahr = 2025
+_, anzahl_tage = calendar.monthrange(jahr, monat_nummer)
 
-    arbeitstage_gesamt -= urlaubstage
+arbeitstage_gesamt = 0
+for tag in range(1, anzahl_tage + 1):
+    d = date(jahr, monat_nummer, tag)
+    wt = d.weekday()
+    if modell == "Modell A (Di–Fr)" and wt in [1, 2, 3, 4] and d not in feiertage_rlp_2025:
+        arbeitstage_gesamt += 1
+    elif modell == "Modell B (Mo–Fr)" and wt in [0, 1, 2, 3, 4] and d not in feiertage_rlp_2025:
+        arbeitstage_gesamt += 1
 
-    umsatzliste = [float(x.strip()) for x in umsaetze_str.split(",") if x.strip()]
-    aktueller_umsatz = sum(umsatzliste)
-    lf4 = fixgehalt * 4
-    lf5 = fixgehalt * 5
-    provisionsziel = wunschgehalt - fixgehalt
-    ziel_umsatz = (provisionsziel / 0.3) + lf4
-    offene_tage = arbeitstage_gesamt - arbeitstage_bisher
-    restumsatz = ziel_umsatz - aktueller_umsatz
-    rest_tagesziel = restumsatz / offene_tage if offene_tage > 0 else 0
-    aktueller_lf = aktueller_umsatz / fixgehalt
-    fortschritt_prozent = min(100, aktueller_umsatz / ziel_umsatz * 100)
-    provision = 0
-    if aktueller_umsatz > lf4:
-        if aktueller_umsatz < lf5:
-            provision = 0.2 * (aktueller_umsatz - lf4)
-        else:
-            provision = 0.3 * (aktueller_umsatz - lf4)
+arbeitstage_gesamt -= urlaubstage
+lf4 = fixgehalt * 4
+lf5 = fixgehalt * 5
+provisionsziel = wunschgehalt - fixgehalt
+ziel_umsatz = (provisionsziel / 0.3) + lf4
+offene_tage = max(1, arbeitstage_gesamt - arbeitstage_bisher)
+restumsatz = ziel_umsatz - aktueller_umsatz
+rest_tagesziel = restumsatz / offene_tage
+aktueller_lf = aktueller_umsatz / fixgehalt
+fortschritt = aktueller_umsatz / ziel_umsatz * 100
+provision = 0
+if aktueller_umsatz > lf4:
+    if aktueller_umsatz < lf5:
+        provision = 0.2 * (aktueller_umsatz - lf4)
+    else:
+        provision = 0.3 * (aktueller_umsatz - lf4)
 
-    st.success(f"📊 {name}, hier ist dein Zwischenstand für {monat}:")
-    st.markdown(f"**Arbeitstage (abzgl. Urlaub):** {arbeitstage_gesamt}")
-    st.markdown(f"**Aktueller Umsatz:** {aktueller_umsatz:.2f} €")
-    st.markdown(f"**Aktueller LF:** {aktueller_lf:.2f}")
-    st.markdown(f"**Aktuelle Provision:** {provision:.2f} €")
-    st.markdown(f"**Noch benötigter Umsatz:** {restumsatz:.2f} €")
-    st.markdown(f"**Tagesziel für verbleibende {offene_tage} Tage:** {rest_tagesziel:.2f} €")
+st.markdown("---")
+st.subheader(f"📊 Dein Zwischenstand für {monat}")
+st.markdown(f"**Arbeitstage (abzgl. Urlaub):** {arbeitstage_gesamt}")
+st.markdown(f"**Aktueller Umsatz:** {aktueller_umsatz:.2f} €")
+st.markdown(f"**Aktueller LF:** {aktueller_lf:.2f}")
+st.markdown(f"**Aktuelle Provision:** {provision:.2f} €")
+st.markdown(f"**Noch benötigter Umsatz:** {restumsatz:.2f} €")
+st.markdown(f"**Tagesziel für verbleibende {offene_tage} Tage:** {rest_tagesziel:.2f} €")
 
-    st.markdown("---")
-    st.subheader("📈 Fortschritt zum Ziel")
-    st.progress(fortschritt_prozent / 100)
+st.subheader("📈 Fortschritt zum Ziel")
+st.progress(min(1.0, fortschritt / 100))
 
-    if fortschritt_prozent >= 100:
-        st.balloons()
-        st.success("🎉 BOOM! Du hast dein Ziel geknackt! Gönn dir den Moment – das ist DEIN Erfolg! 🥂")
+if fortschritt >= 100:
+    st.balloons()
+    st.success("🎉 BOOM! Du hast dein Ziel geknackt! Gönn dir den Moment – das ist DEIN Erfolg! 🥂")
 
-    daten_neu = {
-        "Name": name, "Monat": monat, "Modell": modell, "Urlaubstage": urlaubstage,
-        "GearbeiteteTage": arbeitstage_bisher, "Fixgehalt": fixgehalt,
-        "Wunschgehalt": wunschgehalt, "Umsaetze": umsaetze_str
-    }
-    speichere_daten(daten_neu)
+st.markdown("---")
+st.subheader("💬 Motivation")
+if fortschritt < 50:
+    st.info("🔁 Du bist in Bewegung – dranbleiben lohnt sich!")
+elif fortschritt < 100:
+    st.info("🚀 Starke Basis! Jetzt weiter durchziehen – du kannst sogar drüber hinaus!")
+elif 100 <= fortschritt <= 110:
+    st.success("🏁 Ziel erreicht – und du hast noch Power! Bleib dran – jeder Euro zählt!")
+elif fortschritt > 110:
+    st.success("🌟 Du setzt neue Maßstäbe! Das ist nicht nur stark – das inspiriert dein Team! 💙")
