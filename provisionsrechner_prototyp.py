@@ -35,10 +35,8 @@ feiertage_rlp_2025 = {
 
 st.set_page_config(page_title="Provisionsrechner", layout="centered")
 st.image("https://raw.githubusercontent.com/SalonChrisBest/easyProvisionsrechner/main/SalonChrisBest_Logo_schwarz.jpg", width=200)
-
 st.markdown("### Willkommen im Provisionsrechner 💡")
 
-# --- Name & Laden der bisherigen Daten ---
 name = st.text_input("Gib deinen Namen ein (für automatische Speicherung):")
 daten_alt = lade_daten(name) if name else {}
 
@@ -91,6 +89,7 @@ if submitted and name:
     restumsatz = ziel_umsatz - aktueller_umsatz
     rest_tagesziel = restumsatz / offene_tage if offene_tage > 0 else 0
     aktueller_lf = aktueller_umsatz / fixgehalt
+    fortschritt_prozent = aktueller_umsatz / ziel_umsatz * 100
     provision = 0
     if aktueller_umsatz > lf4:
         if aktueller_umsatz < lf5:
@@ -105,6 +104,26 @@ if submitted and name:
     st.markdown(f"**Aktuelle Provision:** {provision:.2f} €")
     st.markdown(f"**Noch benötigter Umsatz:** {restumsatz:.2f} €")
     st.markdown(f"**Tagesziel für verbleibende {offene_tage} Tage:** {rest_tagesziel:.2f} €")
+
+    # Motivation nach Fortschritt
+    st.markdown("---")
+    st.subheader("💬 Motivation")
+    if fortschritt_prozent < 25:
+        st.info("Du hast noch fast den ganzen Monat vor dir – alles ist möglich! 💥")
+    elif fortschritt_prozent < 50:
+        st.info("Du bist in Bewegung – bleib dran, du wächst mit jedem Tag! 🌱")
+    elif fortschritt_prozent < 75:
+        st.info("Halbzeit! Du weißt, wie’s läuft – jetzt kommt der Feinschliff! 🔥")
+    elif fortschritt_prozent < 90:
+        st.success("Du bist sooo nah dran! Noch ein paar starke Tage und du bist durch 🚀")
+    else:
+        st.success("Finish strong! Gönn dir den Erfolg – du hast es verdient! 🏁")
+
+    # Tipps bei Rückstand
+    if rest_tagesziel > 750:
+        st.warning("🔧 Du bist etwas hinten dran. Tipp: Nutze ruhige Zeiten für Pflegeverkäufe oder Zusatzleistungen!")
+    if rest_tagesziel > 900:
+        st.warning("🔥 Dein Tagesziel ist gerade hoch. Tipp: Konzentrier dich auf Upgrades & hohe Durchschnittsbons,du bist es wert!")
 
     daten_neu = {
         "Name": name, "Monat": monat, "Modell": modell, "Urlaubstage": urlaubstage,
