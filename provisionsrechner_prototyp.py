@@ -1,12 +1,15 @@
 
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, date
+import calendar
 
+# --- Seite konfigurieren ---
 st.set_page_config(page_title="Provisionsrechner", layout="centered")
 
-# --- Logo und Begrüßung ---
+# --- Logo anzeigen ---
 st.image("https://raw.githubusercontent.com/SalonChrisBest/easyProvisionsrechner/main/SalonChrisBest_Logo_schwarz.jpg", width=200)
 
+# --- Begrüßungstext ---
 with st.container():
     st.markdown("### Willkommen im Provisionsrechner 💡")
     st.markdown("""
@@ -29,25 +32,50 @@ with st.form("provisions_form"):
 
     name = st.text_input("Name")
 
-    # Monatsauswahl mit automatischer Vorauswahl
     aktueller_monat = datetime.now().strftime("%B")
     monate = [
         "Januar", "Februar", "März", "April", "Mai", "Juni",
         "Juli", "August", "September", "Oktober", "November", "Dezember"
     ]
     monat = st.selectbox("Monat", monate, index=monate.index(aktueller_monat))
+    jahr = datetime.now().year
 
     modell = st.radio("Arbeitszeitmodell", ["Modell A (Di–Fr)", "Modell B (Mo–Fr)"])
-    arbeitstage_gesamt = st.number_input("Arbeitstage im Monat (inkl. Urlaub/Feiertage)", min_value=1, max_value=31, value=22)
-    arbeitstage_bisher = st.number_input("Bereits gearbeitete Tage", min_value=0, max_value=arbeitstage_gesamt, value=2)
+    urlaubstage = st.number_input("Geplante Urlaubstage", min_value=0, max_value=31, value=0)
+    arbeitstage_bisher = st.number_input("Bereits gearbeitete Tage", min_value=0, max_value=31, value=2)
     fixgehalt = st.number_input("Fixgehalt (Brutto €)", value=2500)
     wunschgehalt = st.number_input("Wunschgehalt (Brutto €)", value=3500)
     umsaetze_str = st.text_input("Tagesumsätze (durch Kommas getrennt)", "614, 544")
     submitted = st.form_submit_button("🚀 Berechnen")
 
+# Feiertage Rheinland-Pfalz 2025 (Auszug)
+feiertage_rlp_2025 = {
+    date(2025, 1, 1), date(2025, 3, 21), date(2025, 4, 21), date(2025, 5, 1),
+    date(2025, 5, 29), date(2025, 6, 9), date(2025, 6, 19), date(2025, 10, 3),
+    date(2025, 11, 1), date(2025, 12, 25), date(2025, 12, 26)
+}
+
 # --- Ergebnisanzeige ---
 if submitted:
     try:
+        monat_nummer = monate.index(monat) + 1
+        _, anzahl_tage = calendar.monthrange(jahr, monat_nummer)
+
+        # Arbeitstage automatisch berechnen
+        arbeitstage_gesamt = 0
+        for tag in range(1, anzahl_tage + 1):
+            aktuelles_datum = date(jahr, monat_nummer, tag)
+            wochentag = aktuelles_datum.weekday()
+
+            if modell == "Modell A (Di–Fr)" and wochentag in [1, 2, 3, 4]:
+                if aktuelles_datum not in feiertage_rlp_2025:
+                    arbeitstage_gesamt += 1
+            elif modell == "Modell B (Mo–Fr)" and wochentag in [0, 1, 2, 3, 4]:
+                if aktuelles_datum not in feiertage_rlp_2025:
+                    arbeitstage_gesamt += 1
+
+        arbeitstage_gesamt -= urlaubstage
+
         umsatzliste = [float(x.strip()) for x in umsaetze_str.split(",") if x.strip()]
         aktueller_umsatz = sum(umsatzliste)
         lf4 = fixgehalt * 4
@@ -66,6 +94,7 @@ if submitted:
                 provision = 0.3 * (aktueller_umsatz - lf4)
 
         st.success(f"📊 {name}, hier ist dein Zwischenstand für {monat}:")
+        st.markdown(f"**Automatisch berechnete Arbeitstage (abzgl. Urlaub):** {arbeitstage_gesamt}")
         st.markdown(f"**Aktueller Umsatz:** {aktueller_umsatz:.2f} €")
         st.markdown(f"**Aktueller LF:** {aktueller_lf:.2f}")
         st.markdown(f"**Aktuelle Provision:** {provision:.2f} €")
@@ -78,5 +107,6 @@ if submitted:
             st.warning("🚀 Du musst etwas Gas geben – nutze starke Tage & Pflegeverkäufe!")
         else:
             st.error("🔥 Du bist hinten dran – lass uns gemeinsam überlegen, wie du aufholen kannst!")
+
     except Exception as e:
         st.error("Fehler bei der Berechnung. Bitte überprüfe deine Eingaben.")
