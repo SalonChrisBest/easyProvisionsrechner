@@ -1,16 +1,18 @@
+
 import streamlit as st
 import gspread
+import json
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime, date
 import calendar
 
 # ------------------- GOOGLE SHEETS SETUP -------------------
-SHEET_NAME = "Provisionsdaten 2025"  # <- Name deines Google Sheets
-JSON_KEYFILE = "provisionsapp-456412-9e8e0d5e3174.json"  # JSON-Datei lokal im Projektordner
-
-# Verbindung herstellen
+SHEET_NAME = "Provisionsdaten 2025"
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name(JSON_KEYFILE, scope)
+
+# Authentifizierung über Streamlit Secrets
+creds_dict = json.loads(st.secrets["GOOGLE_SERVICE_ACCOUNT"])
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 sheet_einstellungen = client.open(SHEET_NAME).worksheet("Einstellungen")
 sheet_umsatz = client.open(SHEET_NAME).worksheet("Umsätze")
@@ -23,7 +25,6 @@ st.markdown("### Willkommen im Provisionsrechner 💡")
 name = st.text_input("Name")
 daten = {}
 
-# Daten auslesen
 if st.button("✅ Namen bestätigen & Daten laden") and name:
     daten_rows = sheet_einstellungen.get_all_records()
     for row in daten_rows:
@@ -37,7 +38,7 @@ monate = ["Januar", "Februar", "März", "April", "Mai", "Juni",
 aktueller_monat = datetime.now().strftime("%B")
 monat = st.selectbox("Monat", monate, index=monate.index(aktueller_monat))
 
-modell = st.radio("Arbeitszeitmodell", ["Modell A (Di–Fr)", "Modell B (Mo–Fr)"], 
+modell = st.radio("Arbeitszeitmodell", ["Modell A (Di–Fr)", "Modell B (Mo–Fr)"],
                   index=0 if daten.get("Modell") == "Modell A (Di–Fr)" else 1)
 
 urlaubstage = st.number_input("Geplante Urlaubstage", min_value=0, max_value=31,
@@ -65,7 +66,6 @@ umsatz_summe = sum(row["DL"] + row["VK"] for row in alle_eintraege if row["Name"
 umsatz_dl_summe = sum(row["DL"] for row in alle_eintraege if row["Name"] == name and row["Monat"] == monat)
 umsatz_vk_summe = sum(row["VK"] for row in alle_eintraege if row["Name"] == name and row["Monat"] == monat)
 
-# Berechnung
 monat_nummer = monate.index(monat) + 1
 jahr = 2025
 _, anzahl_tage = calendar.monthrange(jahr, monat_nummer)
