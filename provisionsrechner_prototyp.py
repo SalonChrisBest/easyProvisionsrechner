@@ -1,14 +1,13 @@
 
 import streamlit as st
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 import datetime
 import calendar
 
 # === Google Sheets Setup ===
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds_dict = st.secrets["google_service_account"]
-creds = ServiceAccountCredentials.from_json_keyfile_dict(dict(creds_dict), scope)
+scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+creds = Credentials.from_service_account_info(st.secrets["google_service_account"], scopes=scope)
 client = gspread.authorize(creds)
 
 sheet = client.open("Provisionsdaten 2025").worksheet("Umsätze")
@@ -78,7 +77,6 @@ if submitted:
     arbeitstage_gesamt = berechne_arbeitstage(monat_index, jahr, modell, urlaubstage)
     aktueller_umsatz = umsatz_dl + umsatz_vk
     lf4 = fixgehalt * 4
-    lf5 = fixgehalt * 5
     provisionsziel = wunschgehalt - fixgehalt
     ziel_umsatz = (provisionsziel / 0.3) + lf4
     offene_tage = arbeitstage_gesamt - arbeitstage_bisher
@@ -89,14 +87,12 @@ if submitted:
     if aktueller_umsatz > lf4:
         provision = 0.3 * (aktueller_umsatz - lf4)
 
-    # Fortschrittsanzeige
     fortschritt = min(aktueller_umsatz / ziel_umsatz, 1.0)
     st.progress(fortschritt)
     if fortschritt >= 1.0:
         st.balloons()
         st.success("🎉 Du hast dein Ziel erreicht! Mega stark!")
 
-    # Ergebnisse anzeigen
     st.success(f"📊 {name}, hier ist dein Zwischenstand für {monat}:")
     st.markdown(f"- **Gesamtumsatz:** {aktueller_umsatz:.2f} €")
     st.markdown(f"- **Heimpflegeanteil (VK):** {umsatz_vk / aktueller_umsatz:.2%}")
@@ -105,7 +101,6 @@ if submitted:
     st.markdown(f"- **Noch benötigter Umsatz:** {restumsatz:.2f} €")
     st.markdown(f"- **Tagesziel für verbleibende {offene_tage} Tage:** {rest_tagesziel:.2f} €")
 
-    # Tipps
     if rest_tagesziel < 650:
         st.info("✅ Du liegst gut im Plan – bleib dran!")
     elif rest_tagesziel < 800:
@@ -113,7 +108,6 @@ if submitted:
     else:
         st.error("🔥 Da ist noch Luft nach oben – baue deine Expertise gezielt in die Beratung ein.")
 
-    # Daten speichern
     try:
         sheet.append_row([name, monat, f"{umsatz_dl:.2f}", f"{umsatz_vk:.2f}", f"{aktueller_umsatz:.2f}", f"{provision:.2f}"])
         st.success("📥 Daten erfolgreich gespeichert!")
