@@ -1,21 +1,19 @@
 
 import streamlit as st
-import datetime
-import calendar
-import json
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import datetime
+import calendar
 
 # === Google Sheets Setup ===
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-import json
 creds_dict = st.secrets["google_service_account"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(dict(creds_dict), scope)
-
 client = gspread.authorize(creds)
+
 sheet = client.open("Provisionsdaten 2025").worksheet("Umsätze")
 
-# === Seite konfigurieren ===
+# === Seitenlayout ===
 st.set_page_config(page_title="Provisionsrechner", layout="centered")
 st.image("https://raw.githubusercontent.com/SalonChrisBest/easyProvisionsrechner/main/SalonChrisBest_Logo_schwarz.jpg", width=200)
 
@@ -34,28 +32,24 @@ _Let’s grow together._
 
 st.divider()
 
-# === Formular zur Dateneingabe ===
+# === Formular zur Eingabe ===
 with st.form("provisions_form"):
     st.subheader("🔧 Deine Eingaben")
 
-    name = st.text_input("Name eingeben")
-
-    monat = st.selectbox("Monat auswählen", [
+    name = st.text_input("Name")
+    monat = st.selectbox("Monat", [
         "Januar", "Februar", "März", "April", "Mai", "Juni",
         "Juli", "August", "September", "Oktober", "November", "Dezember"
     ])
-    
     modell = st.radio("Arbeitszeitmodell", ["Modell A (Di–Fr)", "Modell B (Mo–Fr)"])
     urlaubstage = st.number_input("Geplante Urlaubstage in diesem Monat", min_value=0, max_value=31, value=0)
     arbeitstage_bisher = st.number_input("Bereits gearbeitete Tage", min_value=0, max_value=31, value=0)
-    
     fixgehalt = st.number_input("Fixgehalt (Brutto €)", value=2500)
     wunschgehalt = st.number_input("Wunschgehalt (Brutto €)", value=3500)
-    
     umsatz_dl = st.number_input("Umsatz Dienstleistung (€)", min_value=0.0)
     umsatz_vk = st.number_input("Umsatz Verkauf (€)", min_value=0.0)
 
-    submitted = st.form_submit_button("🚀 Berechnen")
+    submitted = st.form_submit_button("🚀 Berechnen & Speichern")
 
 # === Feiertagsbasierte Arbeitstage berechnen ===
 def berechne_arbeitstage(monat, jahr, modell, urlaubstage):
@@ -77,7 +71,7 @@ def berechne_arbeitstage(monat, jahr, modell, urlaubstage):
     )
     return arbeitstage - urlaubstage
 
-# === Ergebnisse ===
+# === Ergebnisse und Berechnung ===
 if submitted:
     monat_index = list(calendar.month_name).index(monat)
     jahr = datetime.date.today().year
@@ -95,14 +89,14 @@ if submitted:
     if aktueller_umsatz > lf4:
         provision = 0.3 * (aktueller_umsatz - lf4)
 
-    # Fortschritt anzeigen
+    # Fortschrittsanzeige
     fortschritt = min(aktueller_umsatz / ziel_umsatz, 1.0)
     st.progress(fortschritt)
     if fortschritt >= 1.0:
         st.balloons()
         st.success("🎉 Du hast dein Ziel erreicht! Mega stark!")
 
-    # Ergebnisse
+    # Ergebnisse anzeigen
     st.success(f"📊 {name}, hier ist dein Zwischenstand für {monat}:")
     st.markdown(f"- **Gesamtumsatz:** {aktueller_umsatz:.2f} €")
     st.markdown(f"- **Heimpflegeanteil (VK):** {umsatz_vk / aktueller_umsatz:.2%}")
@@ -111,10 +105,17 @@ if submitted:
     st.markdown(f"- **Noch benötigter Umsatz:** {restumsatz:.2f} €")
     st.markdown(f"- **Tagesziel für verbleibende {offene_tage} Tage:** {rest_tagesziel:.2f} €")
 
-    # Motivierende Tipps
+    # Tipps
     if rest_tagesziel < 650:
         st.info("✅ Du liegst gut im Plan – bleib dran!")
     elif rest_tagesziel < 800:
         st.warning("💪 Mit nur einem zusätzlichen Produktverkauf pro Kunde bist du wieder im Rennen. Glaub an dich!")
     else:
         st.error("🔥 Da ist noch Luft nach oben – baue deine Expertise gezielt in die Beratung ein.")
+
+    # Daten speichern
+    try:
+        sheet.append_row([name, monat, f"{umsatz_dl:.2f}", f"{umsatz_vk:.2f}", f"{aktueller_umsatz:.2f}", f"{provision:.2f}"])
+        st.success("📥 Daten erfolgreich gespeichert!")
+    except Exception as e:
+        st.error("Fehler beim Speichern in Google Sheets. Bitte später erneut versuchen.")
